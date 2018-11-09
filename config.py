@@ -9,6 +9,7 @@ SERVER=SERVER_HOSTNAME/IP
 SERVER_PORT=SERVER_PORT_NUMBER
 CLIENT_PORT=CLIENT_PORT_NUMBER
 LOCALPATH=PATH_OF_CLIENT_DOWNLOAD_DIRECTORY
+NAME=NAME_OF_CLIENT
 
 @author: hao
 '''
@@ -19,6 +20,7 @@ class config:
     server="SERVER"
     client_port="CLIENT_PORT"
     localpath="LOCALPATH"
+    name="NAME"
     serverConfig="server.config"
     clientConfig="client.config"
     
@@ -44,11 +46,12 @@ class config:
           
     def readClientConfig(self):
         '''
-        This function read client configuration file, return four values
+        This function read client configuration file, return five values
         @return: serverName
         @return: serverPort
         @return: clientPort
         @return: localPath
+        @return: name
         '''
         try:
             with open(self.clientConfig,'r') as f:
@@ -56,6 +59,7 @@ class config:
                 serName=""
                 clientPort=0
                 downPath=""
+                name=""
                 for l in f:
                     sub=l.strip().split("=")
                     if(sub[0]==self.server_port):
@@ -65,10 +69,12 @@ class config:
                     elif(sub[0]==self.client_port):
                         clientPort=sub[1]   
                     elif(sub[0]==self.localpath):
-                        downPath=sub[1]     
+                        downPath=sub[1]  
+                    elif(sub[0]==self.name):
+                        name=sub[1]       
                     else:
                         pass  
-                return serName, serPort, clientPort, downPath  
+                return serName, serPort, clientPort, downPath, name
         except:
             print(Exception.message())
      

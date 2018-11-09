@@ -20,6 +20,8 @@ HEAD_DOWNLOAD='DLD'
 HEAD_UPLOAD='ULD'
 HEAD_FILE='FIL'
 HEAD_ERROR='ERR'
+HEAD_SENDCHAT='SCH'
+HEAD_RECEIVECHAT='RCH'
 
 # we prepare the message that are sent between server and client as the header + content
 def prepareMsg(header, msg):

@@ -2,6 +2,8 @@
 Script for client side
 @author: hao
 '''
+import re
+import threading
 import protocol
 import config
 from socket import *
@@ -14,29 +16,31 @@ class client:
 
     #Constructor: load client configuration from config file
     def __init__(self):
-        self.serverName, self.serverPort, self.clientPort, self.localPath = config.config().readClientConfig()
+        self.serverName, self.serverPort, self.clientPort, self.localPath, self.name = config.config().readClientConfig()
 
     # Function to produce user menu 
     def printMenu(self):
-        print("Welcome to simple file sharing system!")
+        
+        print("Welcome to simple file sharing system " + self.name + "!")
         print("Please select operations from menu")
         print("--------------------------------------")
         print("1. Review the List of Available Files")
         print("2. Download File")
         print("3. Upload File")
-        print("4. Quit")
+        print("4. Send a message to the server")
+        print("5. Quit")
 
     # Function to get user selection from the menu
     def getUserSelection(self):       
         ans=0
-        # only accept option 1-3
-        while ans>4 or ans<1:
+        # only accept option 1-5
+        while ans>5 or ans<1:
             self.printMenu()
             try:
                 ans=int(input())
             except:
                 ans=0
-            if (ans<=4) and (ans>=1):
+            if (ans<=5) and (ans>=1):
                 return ans
             print("Invalid Option")
 
@@ -45,7 +49,7 @@ class client:
         serverName = self.serverName
         serverPort = self.serverPort
         clientSocket = socket(AF_INET, SOCK_STREAM)
-        clientSocket.connect((serverName,serverPort))
+        clientSocket.connect((serverName,serverPort))  
         return clientSocket
 
     # Get file list from server by sending the request
@@ -140,10 +144,31 @@ class client:
             print(fileName+" has been uploaded!")
         mySocket.close()
 
-    # Main logic of the clien, start the client application
+    def constructChat(self,chat):
+        return self.name+"~IP~"+self.clientPort+"~"+chat.replace("~","") #scrub special characters from the input
+
+    def sendChat(self):
+        chat=input('\nWhat would you like to say?  ')
+        mySocket=self.connect()
+        mySocket.send(protocol.prepareMsg(protocol.HEAD_SENDCHAT, self.constructChat(chat)))
+        print("\nMessage Sent!")
+
+    def chatListen(self):
+        chatPort=int(self.clientPort)
+        chatSocket=socket(AF_INET,SOCK_STREAM)
+        chatSocket.bind(('',chatPort))
+        chatSocket.listen(20)
+        while True:
+            connectionSocket, addr = chatSocket.accept()
+            dataRec = connectionSocket.recv(1024)
+            header,msg=protocol.decodeMsg(dataRec.decode())
+            if(header==protocol.HEAD_RECEIVECHAT):
+                print("\n" + msg)
+
+    # Main logic of the client, start the client application
     def start(self):
         opt=0
-        while opt!=4:
+        while opt!=5:
             opt=self.getUserSelection()
             if opt==1:
                 #if(len(self.fileList)==0): #removed this line so that we could make requests against the server and get results, if the files on the server were added/removed.
@@ -153,10 +178,14 @@ class client:
                 self.downloadFile(self.selectDownloadFile())
             elif opt==3:
                 self.uploadFile(self.selectUploadFile())
+            elif opt==4:
+                self.sendChat()
             else:
                 pass
                 
 def main():
     c=client()
+    thread1 = threading.Thread(target=c.chatListen)
+    thread1.start()
     c.start()
 main()
