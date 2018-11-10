@@ -96,6 +96,29 @@ class server:
                 else:
                     print("\nI could not find a user with that name, sorry.")
 
+    #Looks at the contents of the incoming request, and performs the desired action.  Runs on a seperate thread.
+    def processRequest(self,connectionSocket,addr):
+        dataRec = connectionSocket.recv(1024)
+        header,msg=protocol.decodeMsg(dataRec.decode()) # get client's info, parse it to header and content
+        # Main logic of the program, send different content to client according to client's requests
+        if(header==protocol.HEAD_REQUEST):
+            self.listFile(connectionSocket)
+        elif(header==protocol.HEAD_DOWNLOAD):
+            filename = self.path+"/"+msg
+            if os.path.isfile(filename):
+                self.sendFile(connectionSocket, filename)
+            else:
+                connectionSocket.send(protocol.prepareMsg(protocol.HEAD_ERROR, "File Does Not Exist"))
+        elif(header==protocol.HEAD_UPLOAD):
+            uploadFilename = self.path+"/"+msg
+            self.receiveFile(connectionSocket, uploadFilename)
+        elif(header==protocol.HEAD_SENDCHAT):
+            self.registerRecipient(msg, addr)
+            self.printChat(msg)
+        else:
+            connectionSocket.send(protocol.prepareMsg(protocol.HEAD_ERROR, "Invalid Message"))
+        connectionSocket.close()
+        
     # Main function of server, start the file sharing service
     def start(self):
         serverPort=self.port
@@ -105,26 +128,8 @@ class server:
         print('\nThe server is ready to receive.  If you wish to chat with a client, enter their name followed by the @ symbol')
         while True:    
             connectionSocket, addr = serverSocket.accept()
-            dataRec = connectionSocket.recv(1024)
-            header,msg=protocol.decodeMsg(dataRec.decode()) # get client's info, parse it to header and content
-            # Main logic of the program, send different content to client according to client's requests
-            if(header==protocol.HEAD_REQUEST):
-                self.listFile(connectionSocket)
-            elif(header==protocol.HEAD_DOWNLOAD):
-                filename = self.path+"/"+msg
-                if os.path.isfile(filename):
-                    self.sendFile(connectionSocket, filename)
-                else:
-                    connectionSocket.send(protocol.prepareMsg(protocol.HEAD_ERROR, "File Does Not Exist"))
-            elif(header==protocol.HEAD_UPLOAD):
-                uploadFilename = self.path+"/"+msg
-                self.receiveFile(connectionSocket, uploadFilename)
-            elif(header==protocol.HEAD_SENDCHAT):
-                self.registerRecipient(msg, addr)
-                self.printChat(msg)
-            else:
-                connectionSocket.send(protocol.prepareMsg(protocol.HEAD_ERROR, "Invalid Message"))
-            connectionSocket.close()
+            connectionSocket.settimeout(60)
+            threading.Thread(target = self.processRequest,args = (connectionSocket,addr)).start()
 
 def main():
     s=server()
