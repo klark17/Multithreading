@@ -52,8 +52,8 @@ class client:
             clientSocket = socket(AF_INET, SOCK_STREAM)
             clientSocket.connect((serverName,int(serverPort)))
             return clientSocket
-        except:
-            print("\nThere was a problem connecting to the server, try again later\n")
+        except RuntimeError as e:
+            print("\nThere was a problem connecting to the server, try again later: " + e + "\n")
             return
 
     # Get file list from server by sending the request
@@ -138,7 +138,8 @@ class client:
 
 # Function to send download request to server and wait for file data
     def uploadFile(self,fileName):
-        if not os.path.isfile(fileName):
+        increment=0
+        if not os.path.isfile(self.localPath+"/"+fileName):
             print(fileName+" is missing from the local disk!")
             return
         mySocket=self.connect(self.serverName,self.serverPort)
@@ -147,9 +148,12 @@ class client:
         mySocket.send(protocol.prepareMsg(protocol.HEAD_UPLOAD, fileName))
         with open(self.localPath+"/"+fileName, 'rb') as f:
             print ('file opened')
+            print(fileName+" reading initial data")
             l = f.read(1024) # each time we only send 1024 bytes of data
             while (l):
                 mySocket.send(l)
+                print(fileName+" sending data " + str(increment))
+                increment=increment+1
                 l = f.read(1024)
             print(fileName+" has been uploaded!")
         mySocket.close()

@@ -36,6 +36,7 @@ class server:
     # Function to send a file to client       
     def receiveFile(self,serverSocket,fileName):
         with open(fileName, 'wb') as f:
+            increment=0
             print ('file opened')
             data = serverSocket.recv(1024)
             head,msg=protocol.decodeMsg(data.decode(errors="ignore")) #ignore encoding errors.  This stream can contain either real data, or error messages, we want to decode the bytes to find errors, and if there are none, proceed.
@@ -44,11 +45,12 @@ class server:
             else:
                 f.write(data)
                 while data:
-                    #print('receiving data...')
+                    print('receiving data ' + str(increment) + '...')
+                    increment=increment+1
                     data = serverSocket.recv(1024)
                     #print('data=%s', (data))
                     f.write(data)  # write data to a file
-                print(fileName+" has been uploaded!")
+                print("\n" + fileName + " has been uploaded!")
         serverSocket.close()
     
     #When we receive an incoming chat message from a client, capture information about the person initiating the chat (recipient) and store it in a list.  

@@ -23,8 +23,8 @@ class clientChat:
             clientSocket = socket(AF_INET, SOCK_STREAM)
             clientSocket.connect((serverName,serverPort))
             return clientSocket
-        except:
-            print("\nThere was a problem connecting to the server, try again later\n")
+        except RuntimeError as e:
+            print("\nThere was a problem connecting to the server, try again later: " + e + "\n")
             return
 
     #Given chat data from our user, construct a tilde delimited string that we can send to the server.  Each chat must contain the name of the recipient, the port any responses should come to, and the chat itself
