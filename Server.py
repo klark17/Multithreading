@@ -3,6 +3,7 @@ Script for server
 @author: hao
 '''
 import re
+import time
 import threading
 import config
 import protocol
@@ -49,18 +50,22 @@ class server:
                     f.write(data)  # write data to a file
                 print(fileName+" has been uploaded!")
         serverSocket.close()
-
+    
+    #When we receive an incoming chat message from a client, capture information about the person initiating the chat (recipient) and store it in a list.  
+    #This allows the server to know which clients are connected, with their name, port, and ip address
     def registerRecipient(self,message, addr):
         recip=self.convertChatToRecipient(message,addr)
         if self.recipients.count(recip)==0: #only register this recipient if the server does not know about them yet.
             self.recipients.append(self.convertChatToRecipient(message,addr))
 
+    #convert an incoming chat message to a recipient
     def convertChatToRecipient(self,message,addr):
-        name,ip,port,chat = message.split("~")
+        name,port,chat = message.split("~")
         return recipient.recipient(name,addr[0],port)
 
+    #Output an incoming chat message to the server console
     def printChat(self,message):
-        name,ip,port,chat = message.split("~")
+        name,port,chat = message.split("~")
         print("\n"+name + " at " + str(datetime.now()) + " said: "+chat)
 
     def getClientSocket(self, recipient):
@@ -72,17 +77,20 @@ class server:
 
     def chatRespond(self):
         while True:
-            something =input('Say something: ')
-            match = re.search('^(@[^ ]+)', something)
+            time.sleep(1) #add a slight delay here so the messaging on the server prints out in the correct order
+            chat =input('Say something: ')
+            match = re.search('^(@[^ ]+)', chat) #match a string that starts with @, up till the first space character.  This is our recipient.
             if not match:
                 print("Your chat was not formatted correctly.  Start with @, followed by the user's name, a space, and the message you want to send")
             else:
                 user = match.group() 
                 recip=recipient.recipient(user.replace('@',''.replace(' ','')),'','')
+                chat=re.sub('^(@[^ ]+)','',chat) #strip out the recipient from the chat
                 if recip in self.recipients:
-                    sock = self.getClientSocket(self.recipients[self.recipients.index(recip)])
-                    sock.send(protocol.prepareMsg(protocol.HEAD_RECEIVECHAT,something))
+                    sock = self.getClientSocket(self.recipients[self.recipients.index(recip)]) #there is likely a more efficient way to lookup a recipient object, consider refactoring
+                    sock.send(protocol.prepareMsg(protocol.HEAD_RECEIVECHAT,chat))
                     sock.close()
+                    print("\nMessage Sent!")
                 else:
                     print("\nI could not find a user with that name, sorry.")
 

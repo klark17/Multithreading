@@ -3,6 +3,8 @@ Script for client side
 @author: hao
 '''
 import re
+from clientChat import clientChat
+from datetime import datetime
 import threading
 import protocol
 import config
@@ -13,10 +15,10 @@ import os.path
 class client:
     
     fileList=[] # list to store the file information
-
+    chat=clientChat() #an object that manages client chat functionality
     #Constructor: load client configuration from config file
     def __init__(self):
-        self.serverName, self.serverPort, self.clientPort, self.localPath, self.name = config.config().readClientConfig()
+        self.serverName, self.serverPort, self.clientPort, self.localPath, self.name, self.clientName = config.config().readClientConfig()
 
     # Function to produce user menu 
     def printMenu(self):
@@ -45,16 +47,20 @@ class client:
             print("Invalid Option")
 
     # Build connection to server
-    def connect(self):
-        serverName = self.serverName
-        serverPort = self.serverPort
-        clientSocket = socket(AF_INET, SOCK_STREAM)
-        clientSocket.connect((serverName,serverPort))  
-        return clientSocket
+    def connect(self, serverName, serverPort):
+        try:
+            clientSocket = socket(AF_INET, SOCK_STREAM)
+            clientSocket.connect((serverName,int(serverPort)))
+            return clientSocket
+        except:
+            print("\nThere was a problem connecting to the server, try again later\n")
+            return
 
     # Get file list from server by sending the request
     def getFileList(self):
-        mySocket=self.connect()
+        mySocket=self.connect(self.serverName,self.serverPort)
+        if mySocket is None:
+            return
         mySocket.send(protocol.prepareMsg(protocol.HEAD_REQUEST," "))
         header, msg=protocol.decodeMsg(mySocket.recv(1024).decode())
         mySocket.close()
@@ -110,7 +116,9 @@ class client:
 
     # Function to send download request to server and wait for file data
     def downloadFile(self,fileName):
-        mySocket=self.connect()
+        mySocket=self.connect(self.serverName,self.serverPort)
+        if mySocket is None:
+            return
         mySocket.send(protocol.prepareMsg(protocol.HEAD_DOWNLOAD, fileName))
         with open(self.localPath+"/"+fileName, 'wb') as f:
             print ('file opened')
@@ -133,7 +141,9 @@ class client:
         if not os.path.isfile(fileName):
             print(fileName+" is missing from the local disk!")
             return
-        mySocket=self.connect()
+        mySocket=self.connect(self.serverName,self.serverPort)
+        if mySocket is None:
+            return
         mySocket.send(protocol.prepareMsg(protocol.HEAD_UPLOAD, fileName))
         with open(self.localPath+"/"+fileName, 'rb') as f:
             print ('file opened')
@@ -144,30 +154,13 @@ class client:
             print(fileName+" has been uploaded!")
         mySocket.close()
 
-    def constructChat(self,chat):
-        return self.name+"~IP~"+self.clientPort+"~"+chat.replace("~","") #scrub special characters from the input
-
-    def sendChat(self):
-        chat=input('\nWhat would you like to say?  ')
-        mySocket=self.connect()
-        mySocket.send(protocol.prepareMsg(protocol.HEAD_SENDCHAT, self.constructChat(chat)))
-        print("\nMessage Sent!")
-
-    def chatListen(self):
-        chatPort=int(self.clientPort)
-        chatSocket=socket(AF_INET,SOCK_STREAM)
-        chatSocket.bind(('',chatPort))
-        chatSocket.listen(20)
-        while True:
-            connectionSocket, addr = chatSocket.accept()
-            dataRec = connectionSocket.recv(1024)
-            header,msg=protocol.decodeMsg(dataRec.decode())
-            if(header==protocol.HEAD_RECEIVECHAT):
-                print("\n" + msg)
+   
 
     # Main logic of the client, start the client application
     def start(self):
         opt=0
+        thread1 = threading.Thread(target=self.chat.chatListen) #start the chat on a seperate thread
+        thread1.start()
         while opt!=5:
             opt=self.getUserSelection()
             if opt==1:
@@ -179,13 +172,13 @@ class client:
             elif opt==3:
                 self.uploadFile(self.selectUploadFile())
             elif opt==4:
-                self.sendChat()
+                self.chat.sendChat()
             else:
-                pass
+                sock=self.connect(self.clientName,self.clientPort)
+                sock.send(protocol.prepareMsg(protocol.HEAD_TERMINATECHAT, 'Exiting')) #send a message to that port to wake it up, so that the while loop can terminate
+                sock.close()
                 
 def main():
     c=client()
-    thread1 = threading.Thread(target=c.chatListen)
-    thread1.start()
     c.start()
 main()

@@ -21,6 +21,7 @@ class config:
     client_port="CLIENT_PORT"
     localpath="LOCALPATH"
     name="NAME"
+    client="CLIENT"
     serverConfig="server.config"
     clientConfig="client.config"
     
@@ -52,6 +53,7 @@ class config:
         @return: clientPort
         @return: localPath
         @return: name
+        @return: client
         '''
         try:
             with open(self.clientConfig,'r') as f:
@@ -60,6 +62,7 @@ class config:
                 clientPort=0
                 downPath=""
                 name=""
+                client=""
                 for l in f:
                     sub=l.strip().split("=")
                     if(sub[0]==self.server_port):
@@ -70,11 +73,13 @@ class config:
                         clientPort=sub[1]   
                     elif(sub[0]==self.localpath):
                         downPath=sub[1]  
+                    elif(sub[0]==self.client):
+                        client=sub[1]  
                     elif(sub[0]==self.name):
                         name=sub[1]       
                     else:
                         pass  
-                return serName, serPort, clientPort, downPath, name
+                return serName, serPort, clientPort, downPath, name, client
         except:
             print(Exception.message())
      
