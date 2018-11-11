@@ -1,0 +1,7 @@
+# application config files, and some other stuff that isn't required.
+*.config
+.git/
+.vscode/
+__pycache__/
+pics/
+*.bak
