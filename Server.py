@@ -129,7 +129,6 @@ class server:
         print('\nThe server is ready to receive.  If you wish to chat with a client, enter their name followed by the @ symbol')
         while True:    
             connectionSocket, addr = serverSocket.accept()
-<<<<<<< HEAD
             dataRec = connectionSocket.recv(1024)
             header,msg=protocol.decodeMsg(dataRec.decode()) # get client's info, parse it to header and content
             # Main logic of the program, send different content to client according to client's requests
@@ -150,10 +149,8 @@ class server:
             else:
                 connectionSocket.send(protocol.prepareMsg(protocol.HEAD_ERROR, "Invalid Message"))
             connectionSocket.close()
-=======
             connectionSocket.settimeout(60)
             threading.Thread(target = self.processRequest,args = (connectionSocket,addr)).start()
->>>>>>> f5f7cedbd6a819ea9797c014ecb21aa092a8ad2c
 
 def main():
     s=server()
