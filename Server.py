@@ -33,8 +33,9 @@ class server:
         while (l):
             serverSocket.send(l)
             l = f.read(1024)
+
     # Function to send a file to client       
-    def receiveFile(self,serverSocket,fileName):
+    def receiveFile(self,serverSocket,fileName,addr):
         with open(fileName, 'wb') as f:
             increment=0
             print ('file opened')
@@ -50,7 +51,7 @@ class server:
                     data = serverSocket.recv(1024)
                     #print('data=%s', (data))
                     f.write(data)  # write data to a file
-                print("\n" + fileName + " has been uploaded!")
+                print("\n" + fileName + " has been uploaded from " + str(addr[0]) + " at " + str(datetime.now()) +  "!")
         serverSocket.close()
     
     #When we receive an incoming chat message from a client, capture information about the person initiating the chat (recipient) and store it in a list.  
@@ -118,7 +119,7 @@ class server:
                     connectionSocket.send(protocol.prepareMsg(protocol.HEAD_ERROR, "File Does Not Exist"))
             elif(header==protocol.HEAD_UPLOAD):
                 uploadFilename = self.path+"/"+msg
-                self.receiveFile(connectionSocket, uploadFilename)
+                self.receiveFile(connectionSocket, uploadFilename, addr)
             elif(header==protocol.HEAD_SENDCHAT):
                 self.registerRecipient(msg, addr)
                 self.printChat(msg)
