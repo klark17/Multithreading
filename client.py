@@ -3,6 +3,7 @@ Script for client side
 @author: hao
 '''
 import re
+import time
 from clientChat import clientChat
 from datetime import datetime
 import threading
@@ -136,9 +137,9 @@ class client:
                 print(fileName+" has been downloaded!")
         mySocket.close()
 
-# Function to send download request to server and wait for file data
+    # A Function that sends an upload request to the file server, and uploads the specified filename
     def uploadFile(self,fileName):
-        increment=0
+        #increment=0
         if not os.path.isfile(self.localPath+"/"+fileName):
             print(fileName+" is missing from the local disk!")
             return
@@ -146,14 +147,15 @@ class client:
         if mySocket is None:
             return
         mySocket.send(protocol.prepareMsg(protocol.HEAD_UPLOAD, fileName))
+        time.sleep(0.5) #add a slight delay here, we found in testing that if we send this request and the first file request at the same time, we can't control which arrives first, which means the server can't decide what to do with the incoming file.  This helps mitigate that issue, but this is likely not an ideal solution
         with open(self.localPath+"/"+fileName, 'rb') as f:
-            print ('file opened')
             print(fileName+" reading initial data")
             l = f.read(1024) # each time we only send 1024 bytes of data
             while (l):
                 mySocket.send(l)
-                print(fileName+" sending data " + str(increment))
-                increment=increment+1
+                time.sleep(0.1) #add an artifical delay so we can more easily watch multiple downloads/uploads from the server
+                #print(fileName+" sending data " + str(increment))
+                #increment=increment+1
                 l = f.read(1024)
             print(fileName+" has been uploaded!")
         mySocket.close()
@@ -163,13 +165,17 @@ class client:
     # Main logic of the client, start the client application
     def start(self):
         opt=0
-        thread1 = threading.Thread(target=self.chat.chatListen) #start the chat on a seperate thread
+        thread1 = threading.Thread(target=self.chat.chatListen) #start the chat service on a seperate thread
         thread1.start()
         while opt!=5:
             opt=self.getUserSelection()
-            if opt==1:
+            if opt==1: #list the files available on both the local disk and remote server
                 #if(len(self.fileList)==0): #removed this line so that we could make requests against the server and get results, if the files on the server were added/removed.
+                print('\nThese are the files available on the remote server:')
                 self.getFileList()
+                self.printFileList()    
+                print('\nThese are the files available on your local disk:')
+                self.getLocalFileList()
                 self.printFileList()                  
             elif opt==2:
                 self.downloadFile(self.selectDownloadFile())
@@ -179,7 +185,9 @@ class client:
                 self.chat.sendChat()
             else:
                 sock=self.connect(self.clientName,self.clientPort)
-                sock.send(protocol.prepareMsg(protocol.HEAD_TERMINATECHAT, 'Exiting')) #send a message to that port to wake it up, so that the while loop can terminate
+                #send a message to that port to wake it up, so that the while loop can terminate
+                #this is necessary because we cannot terminate our client unless the chat thread is allowed to gracefully terminate
+                sock.send(protocol.prepareMsg(protocol.HEAD_TERMINATECHAT, 'Exiting')) 
                 sock.close()
                 
 def main():

@@ -17,7 +17,7 @@ class clientChat:
     def __init__(self):
         self.serverName, self.serverPort, self.clientPort, self.localPath, self.name, self.clientName = config.config().readClientConfig()
 
-    # Build connection to server
+    # Build connection to server, with error handling
     def connect(self, serverName, serverPort):
         try:
             clientSocket = socket(AF_INET, SOCK_STREAM)

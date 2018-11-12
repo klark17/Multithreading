@@ -27,18 +27,23 @@ class server:
         serverSocket.send(protocol.prepareFileList(protocol.HEAD_LIST, self.getFileList()))
 
     # Function to send a file to client       
-    def sendFile(self,serverSocket,fileName):
+    def sendFile(self,serverSocket,fileName, addr):
+        print("\n" + fileName + " has begun a download from " + str(addr[0]) + " at " + str(datetime.now()) +  "!")
         f = open(fileName,'rb')
         l = f.read(1024) # each time we only send 1024 bytes of data
         while (l):
             serverSocket.send(l)
+            time.sleep(0.1) #add an artifical delay so we can more easily watch multiple downloads/uploads from the server
             l = f.read(1024)
+        print("\n" + fileName + " has completed a download from " + str(addr[0]) + " at " + str(datetime.now()) +  "!")
+        serverSocket.close()
+        
 
-    # Function to send a file to client       
+    # Function to allow a file upload from a client       
     def receiveFile(self,serverSocket,fileName,addr):
         with open(fileName, 'wb') as f:
             increment=0
-            print ('file opened')
+            print("\n" + fileName + " has begun an upload from " + str(addr[0]) + " at " + str(datetime.now()) +  "!")
             data = serverSocket.recv(1024)
             head,msg=protocol.decodeMsg(data.decode(errors="ignore")) #ignore encoding errors.  This stream can contain either real data, or error messages, we want to decode the bytes to find errors, and if there are none, proceed.
             if head=="ERR":
@@ -46,7 +51,7 @@ class server:
             else:
                 f.write(data)
                 while data:
-                    print('receiving data ' + str(increment) + '...')
+                    #print('receiving data ' + str(increment) + '...')
                     increment=increment+1
                     data = serverSocket.recv(1024)
                     #print('data=%s', (data))
@@ -61,7 +66,7 @@ class server:
         if self.recipients.count(recip)==0: #only register this recipient if the server does not know about them yet.
             self.recipients.append(self.convertChatToRecipient(message,addr))
 
-    #convert an incoming chat message to a recipient
+    #convert an incoming chat message to a recipient object
     def convertChatToRecipient(self,message,addr):
         name,port,chat = message.split("~")
         return recipient.recipient(name,addr[0],port)
@@ -78,6 +83,7 @@ class server:
         clientSocket.connect((serverName,serverPort))  
         return clientSocket
 
+    #a function that allows the server console to chat with a client.  Can be used to send messages to any number of connected clients
     def chatRespond(self):
         while True:
             time.sleep(1) #add a slight delay here so the messaging on the server prints out in the correct order
@@ -104,21 +110,24 @@ class server:
         # Main logic of the program, send different content to client according to client's requests
         if(header==protocol.HEAD_REQUEST):
             self.listFile(connectionSocket)
+            connectionSocket.close()
         elif(header==protocol.HEAD_DOWNLOAD):
             filename = self.path+"/"+msg
             if os.path.isfile(filename):
-                self.sendFile(connectionSocket, filename)
+                self.sendFile(connectionSocket, filename, addr)
             else:
                 connectionSocket.send(protocol.prepareMsg(protocol.HEAD_ERROR, "File Does Not Exist"))
+                connectionSocket.close()
         elif(header==protocol.HEAD_UPLOAD):
             uploadFilename = self.path+"/"+msg
             self.receiveFile(connectionSocket, uploadFilename,addr)
         elif(header==protocol.HEAD_SENDCHAT):
             self.registerRecipient(msg, addr)
             self.printChat(msg)
+            connectionSocket.close()
         else:
             connectionSocket.send(protocol.prepareMsg(protocol.HEAD_ERROR, "Invalid Message"))
-        connectionSocket.close()
+            connectionSocket.close()
         
     # Main function of server, start the file sharing service
     def start(self):
