@@ -80,6 +80,7 @@ class client:
             count+=1
             print('{:<3d}{}'.format(count,f))
 
+    #retrieve a list of files from the path specified in localPath
     def getLocalFileList(self):
         self.fileList=os.listdir(self.localPath)
 
@@ -99,7 +100,7 @@ class client:
                 return self.fileList[ans-1]
             print("Invalid number")
 
-# Function to select the file from file list by file number,
+    # Function to select the file from file list by file number,
     # return the file name user selected
     def selectUploadFile(self):
         self.getLocalFileList()
@@ -118,7 +119,7 @@ class client:
     # Function to send download request to server and wait for file data
     def downloadFile(self,fileName):
         mySocket=self.connect(self.serverName,self.serverPort)
-        if mySocket is None:
+        if mySocket is None: #If a socket could not be opened, leave gracefully
             return
         mySocket.send(protocol.prepareMsg(protocol.HEAD_DOWNLOAD, fileName))
         with open(self.localPath+"/"+fileName, 'wb') as f:
@@ -144,7 +145,7 @@ class client:
             print(fileName+" is missing from the local disk!")
             return
         mySocket=self.connect(self.serverName,self.serverPort)
-        if mySocket is None:
+        if mySocket is None: #If a socket could not be opened, leave gracefully
             return
         mySocket.send(protocol.prepareMsg(protocol.HEAD_UPLOAD, fileName))
         time.sleep(0.5) #add a slight delay here, we found in testing that if we send this request and the first file request at the same time, we can't control which arrives first, which means the server can't decide what to do with the incoming file.  This helps mitigate that issue, but this is likely not an ideal solution

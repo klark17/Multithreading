@@ -86,7 +86,7 @@ class server:
     #a function that allows the server console to chat with a client.  Can be used to send messages to any number of connected clients
     def chatRespond(self):
         while True:
-            time.sleep(1) #add a slight delay here so the messaging on the server prints out in the correct order
+            time.sleep(.5) #add a slight delay here so the messaging on the server prints out in the correct order
             chat =input('Say something: ')
             match = re.search('^(@[^ ]+)', chat) #match a string that starts with @, up till the first space character.  This is our recipient.
             if not match:
@@ -100,7 +100,7 @@ class server:
                     sock.send(protocol.prepareMsg(protocol.HEAD_RECEIVECHAT,chat))
                     sock.close()
                     print("\nMessage Sent!")
-                else:
+                else: #chat was formatted correctly, but the server could not find the recipient.
                     print("\nI could not find a user with that name, sorry.")
 
     #Looks at the contents of the incoming request, and performs the desired action.  Runs on a seperate thread.
@@ -122,7 +122,7 @@ class server:
             uploadFilename = self.path+"/"+msg
             self.receiveFile(connectionSocket, uploadFilename,addr)
         elif(header==protocol.HEAD_SENDCHAT):
-            self.registerRecipient(msg, addr)
+            self.registerRecipient(msg, addr) #register the recipient on the server.  This allows the server to retrieve that persons target IP and port later if they want to respond to a chat
             self.printChat(msg)
             connectionSocket.close()
         else:
